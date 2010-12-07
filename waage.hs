@@ -13,7 +13,8 @@ data Label = Unknown | Heavy | Light | Normal
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
-    labels <- sequence $ replicate n $ oneof $ map return all_labels 
+    let n' = n + 3
+    labels <- sequence $ replicate n' $ oneof $ map return all_labels 
     return $ foldl (\p l -> set_label l (length $ filter (== l) labels) p) emptyPosition all_labels
 
 data QCPosMove = QCPosMove Position Move
@@ -96,11 +97,13 @@ apply_move pos move = nub [apply_result res pos move | res <- [Equal, Left, Righ
 apply_result :: Result -> Position -> Move -> Position
 apply_result Equal p (Move l r) = let p' = p `sub` l `sub` r 
                                   in p' {normal = normal p' + total l + total r}
-apply_result Left  p (Move l r) = Position { unknown = unknown p - unknown l - unknown r
-                                           , heavy   = heavy p   - heavy r   + unknown l
-                                           , light   = light p   - light l   + unknown r
-                                           , normal  = normal p  + light l   + heavy r
-                                           }
+apply_result Left  p (Move le ri) = let he = unknown le + heavy le
+                                        li = unknown ri + light ri
+                                  in Position { unknown = 0
+                                              , heavy   = he
+                                              , light   = li
+                                              , normal  = total p - he - li
+                                              }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
 qc_apply_result (QCPosMove p m) res = total p == total (apply_result res p m)
@@ -113,9 +116,7 @@ bad_move pos = any nowin . apply_move pos
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
-qc_good_moves p | normal p <= total p - 2                    = not $ null $ good_moves p
-                | normal p == total p - 1 && unknown p == 1  = length (good_moves p) == 1
-                | otherwise                                  = null $ good_moves p
+qc_good_moves p = (total p > 2) ==> (normal p >= total p - 1) == (null $ good_moves p)
 
 depth :: Position ->  Int
 depth pos
@@ -127,6 +128,6 @@ depth pos
     minimum' [] = 1000
     minimum' l  = minimum l
 
-qc_depth p = depth p < 1000
+qc_depth p = (total p > 2) ==> depth p < 1000
                     
 
