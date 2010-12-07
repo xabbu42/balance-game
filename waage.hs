@@ -1,10 +1,24 @@
 import Prelude hiding (Left, Right)
+import Test.QuickCheck hiding (Result)
 
 data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , heavy   :: Int -- balls with could be heavy but not light
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
                          } deriving (Show)
+
+data QCPosMove = QCPosMove Position Move
+                 deriving (Show)
+
+instance Arbitrary QCPosMove where
+  arbitrary = sized $ \n -> do
+    let n' = n + 2
+    u <- choose (0, n')
+    h <- choose (0,0 `max` n' - u)
+    l <- choose (0,0 `max` n' - u - h)
+    let pos = Position {unknown = u, heavy = h, light = l, normal = n' - u - h - l}
+    mov <- oneof $ map return $ possible_moves pos
+    return $ QCPosMove pos mov
 
 data Label = Unknown | Heavy | Light | Normal
 
@@ -15,6 +29,9 @@ data Move = Move Scale Scale
 
 data Result = Equal | Left | Right
             deriving (Show)
+
+instance Arbitrary Result where
+  arbitrary = oneof [return Equal, return Left, return Right]
 
 all_labels :: [Label]
 all_labels = [Unknown, Heavy, Light, Normal]
@@ -75,13 +92,15 @@ apply_result Left  p (Move l r) = Position { unknown = unknown p - unknown l - u
                                            }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
+qc_apply_result (QCPosMove p m) res = total p == total (apply_result res p m)
+
 bad_move :: Position -> Move -> Bool
 bad_move pos = any nowin . apply_move pos
   where
     nowin new = (unknown new >= unknown pos) && (normal new <= normal pos)
 
 good_moves :: Position -> [Move]
-good_moves pos = filter (bad_move pos) $ possible_moves pos
+good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
 depth :: Position ->  Int
 depth pos
