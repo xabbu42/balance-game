@@ -74,7 +74,7 @@ sub a b = foldl sub_label  a all_labels
   where
     sub_label p l = set_label l (get_label l a - get_label l b) p
 
-qc_sub p1 p2 = total (p1 `sub` p2) == (total p1 - total p2)
+prop_sub p1 p2 = total (p1 `sub` p2) == (total p1 - total p2)
 
 possible_scales :: Position -> Int -> [Scale]
 possible_scales p n = possible_scales' p all_labels n
@@ -106,7 +106,7 @@ apply_result Left  p (Move le ri) = let he = unknown le + heavy le
                                               }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
-qc_apply_result (QCPosMove p m) res = total p == total (apply_result res p m)
+prop_apply_result (QCPosMove p m) res = total p == total (apply_result res p m)
 
 bad_move :: Position -> Move -> Bool
 bad_move pos = any nowin . apply_move pos
@@ -116,7 +116,7 @@ bad_move pos = any nowin . apply_move pos
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
-qc_good_moves p = (total p > 2) ==> (normal p >= total p - 1) == (null $ good_moves p)
+prop_good_moves p = (total p > 2) ==> (normal p >= total p - 1) == (null $ good_moves p)
 
 depth :: Position ->  Int
 depth pos
@@ -128,6 +128,6 @@ depth pos
     minimum' [] = 1000
     minimum' l  = minimum l
 
-qc_depth p = (total p > 2) ==> depth p < 1000
+prop_depth p = (total p > 2 && total p < 6) ==> depth p < 1000
                     
 
