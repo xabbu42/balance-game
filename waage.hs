@@ -7,17 +7,23 @@ data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , normal  :: Int -- balls with normal weight
                          } deriving (Show)
 
-data QCPosMove = QCPosMove Position Move
-                 deriving (Show)
-
-instance Arbitrary QCPosMove where
+instance Arbitrary Position where
   arbitrary = sized $ \n -> do
     let n' = n + 2
     u <- choose (0, n')
     h <- choose (0,0 `max` n' - u)
     l <- choose (0,0 `max` n' - u - h)
-    let pos = Position {unknown = u, heavy = h, light = l, normal = n' - u - h - l}
-    mov <- oneof $ map return $ possible_moves pos
+    return Position {unknown = u, heavy = h, light = l, normal = n' - u - h - l}
+
+data QCPosMove = QCPosMove Position Move
+                 deriving (Show)
+
+instance Arbitrary QCPosMove where
+  arbitrary = sized $ \n -> do
+    let n'  = n + 3
+        n'' = 1 `max` (n `div` 3)
+    pos <- resize (n' - n'') arbitrary
+    mov <- oneof $ map return $ take n'' $ possible_moves pos
     return $ QCPosMove pos mov
 
 data Label = Unknown | Heavy | Light | Normal
@@ -65,6 +71,8 @@ sub a b = foldl sub_label  a all_labels
   where
     sub_label p l = set_label l (get_label l a - get_label l b) p
 
+qc_sub p1 p2 = total (p1 `sub` p2) == (total p1 - total p2)
+
 possible_scales :: Position -> Int -> [Scale]
 possible_scales p n = possible_scales' p all_labels n
   where
@@ -84,11 +92,12 @@ apply_move :: Position -> Move -> [Position]
 apply_move pos move = [apply_result res pos move | res <- [Equal, Left, Right]]
 
 apply_result :: Result -> Position -> Move -> Position
-apply_result Equal p (Move l r) = (p `sub` l `sub` r) {normal = normal p + total l + total r}
+apply_result Equal p (Move l r) = let p' = p `sub` l `sub` r 
+                                  in p' {normal = normal p' + total l + total r}
 apply_result Left  p (Move l r) = Position { unknown = unknown p - unknown l - unknown r
-                                           , heavy   = heavy p - heavy r - heavy l + total l
-                                           , light   = light p - light r - light l + total r
-                                           , normal  = normal p + light l + heavy r
+                                           , heavy   = heavy p   - heavy r   + unknown l
+                                           , light   = light p   - light l   + unknown r
+                                           , normal  = normal p  + light l   + heavy r
                                            }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
