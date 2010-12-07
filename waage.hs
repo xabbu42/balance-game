@@ -7,14 +7,14 @@ data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
                          } deriving (Show, Eq)
+data Label = Unknown | Heavy | Light | Normal
+           deriving (Show, Eq)
+
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
-    let n' = n + 2
-    u <- choose (0, n')
-    h <- choose (0,0 `max` n' - u)
-    l <- choose (0,0 `max` n' - u - h)
-    return Position {unknown = u, heavy = h, light = l, normal = n' - u - h - l}
+    labels <- sequence $ replicate n $ oneof $ map return all_labels 
+    return $ foldl (\p l -> set_label l (length $ filter (== l) labels) p) emptyPosition all_labels
 
 data QCPosMove = QCPosMove Position Move
                  deriving (Show)
@@ -26,8 +26,6 @@ instance Arbitrary QCPosMove where
     pos <- resize (n' - n'') arbitrary
     mov <- oneof $ map return $ take n'' $ possible_moves pos
     return $ QCPosMove pos mov
-
-data Label = Unknown | Heavy | Light | Normal
 
 type Scale = Position
 
@@ -93,7 +91,7 @@ possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <-
     other_scales s = possible_scales (p `sub` s) (total s)
 
 apply_move :: Position -> Move -> [Position]
-apply_move pos move = [apply_result res pos move | res <- [Equal, Left, Right]]
+apply_move pos move = nub [apply_result res pos move | res <- [Equal, Left, Right]]
 
 apply_result :: Result -> Position -> Move -> Position
 apply_result Equal p (Move l r) = let p' = p `sub` l `sub` r 
@@ -115,9 +113,9 @@ bad_move pos = any nowin . apply_move pos
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
-qc_good_moves p | normal p <= total p - 2                     = not $ null $ good_moves p
+qc_good_moves p | normal p <= total p - 2                    = not $ null $ good_moves p
                 | normal p == total p - 1 && unknown p == 1  = length (good_moves p) == 1
-                | otherwise                                  = null (good_moves p)
+                | otherwise                                  = null $ good_moves p
 
 depth :: Position ->  Int
 depth pos
@@ -128,5 +126,7 @@ depth pos
   where
     minimum' [] = 1000
     minimum' l  = minimum l
+
+qc_depth p = depth p < 1000
                     
 
