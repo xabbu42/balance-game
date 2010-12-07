@@ -1,11 +1,12 @@
 import Prelude hiding (Left, Right)
 import Test.QuickCheck hiding (Result)
+import Data.List
 
 data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , heavy   :: Int -- balls with could be heavy but not light
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
-                         } deriving (Show)
+                         } deriving (Show, Eq)
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
@@ -33,8 +34,11 @@ type Scale = Position
 data Move = Move Scale Scale
             deriving (Show)
 
+instance Eq Move where
+  (==) (Move l1 r1) (Move l2 r2) = (l1 == l2 && r1 == r2) || (l1 == r2 && r1 == l2)
+
 data Result = Equal | Left | Right
-            deriving (Show)
+            deriving (Show, Eq)
 
 instance Arbitrary Result where
   arbitrary = oneof [return Equal, return Left, return Right]
@@ -83,7 +87,7 @@ possible_scales p n = possible_scales' p all_labels n
     possible_scales' _ [] _     = []
 
 possible_moves :: Position -> [Move]
-possible_moves p = [Move a b | k <- [1..n], a <- possible_scales p k, b <- other_scales a]
+possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <- other_scales a]
   where
     n = total p `div` 2
     other_scales s = possible_scales (p `sub` s) (total s)
@@ -110,6 +114,10 @@ bad_move pos = any nowin . apply_move pos
 
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
+
+qc_good_moves p | normal p <= total p - 2                     = not $ null $ good_moves p
+                | normal p == total p - 1 && unknown p == 1  = length (good_moves p) == 1
+                | otherwise                                  = null (good_moves p)
 
 depth :: Position ->  Int
 depth pos
