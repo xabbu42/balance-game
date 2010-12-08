@@ -16,7 +16,7 @@ data Label = Unknown | Heavy | Light | Normal
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
-    let n' = n + 3
+    let n' = (n + 3) `min` 10
     labels <- sequence $ replicate n' $ oneof $ map return all_labels 
     return $ foldl (\p l -> set_label l (length $ filter (== l) labels) p) emptyPosition all_labels
 
@@ -128,7 +128,7 @@ bad_move pos = any nowin . apply_move pos
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
-prop_good_moves p = (total p > 2) ==> (normal p >= total p - 1) == (null $ good_moves p)
+prop_good_moves p = (normal p >= total p - 1) == (null $ good_moves p)
 
 depth :: Position ->  Int
 depth pos = depth' pos
@@ -145,6 +145,3 @@ depth pos = depth' pos
                                              $ good_moves p)
     minimum' [] = 1000
     minimum' l  = minimum l
-
-prop_depth p = (total p > 2 && total p < 6) ==> depth p < 1000
-                    
