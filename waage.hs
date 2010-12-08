@@ -77,6 +77,7 @@ sub a b = foldl sub_label  a all_labels
   where
     sub_label p l = set_label l (get_label l a - get_label l b) p
 
+prop_sub :: Position -> Position -> Bool
 prop_sub p1 p2 = total (p1 `sub` p2) == (total p1 - total p2)
 
 possible_scales :: Position -> Int -> [Scale]
@@ -94,9 +95,12 @@ possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <-
     n = total p `div` 2
     other_scales s = possible_scales (p `sub` s) (total s)
 
+prop_possible_moves_less_balls :: Position -> Bool
 prop_possible_moves_less_balls p = all less_balls $ possible_moves p
   where
     less_balls (Move l r) = total l + total r <= total p
+
+prop_possible_moves_same_num :: Position -> Bool
 prop_possible_moves_same_num p = all same_num $ possible_moves p
   where
     same_num (Move l r) = total l == total r
@@ -116,7 +120,10 @@ apply_result Left  p (Move le ri) = let he = unknown le + heavy le
                                               }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
+prop_apply_result_sametotal :: QCPosMove -> Result -> Bool
 prop_apply_result_sametotal (QCPosMove p m) res = total p == total (apply_result res p m)
+
+prop_apply_result_positive :: QCPosMove -> Result -> Bool
 prop_apply_result_positive (QCPosMove p m) res = let p' = apply_result res p m
                                                  in all (\l -> get_label l p' >= 0) all_labels
 
@@ -128,9 +135,13 @@ bad_move pos = any nowin . apply_move pos
 good_moves :: Position -> [Move]
 good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 
+prop_good_moves :: Position -> Bool
 prop_good_moves p = (normal p >= total p - 1) == (null $ good_moves p)
 
-depth  = depthWith $ \p -> (normal p >= total p - 1)
+depth :: Position -> Int
+depth = depthWith $ \p -> (normal p >= total p - 1)
+
+depth_ :: Position -> Int
 depth_ = depthWith $ \p -> (normal p >= total p - 1 && unknown p == 0)
 
 depthWith :: (Position -> Bool) -> Position ->  Int
