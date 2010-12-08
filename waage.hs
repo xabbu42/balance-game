@@ -91,6 +91,13 @@ possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <-
     n = total p `div` 2
     other_scales s = possible_scales (p `sub` s) (total s)
 
+prop_possible_moves_less_balls p = all less_balls $ possible_moves p
+  where
+    less_balls (Move l r) = total l + total r <= total p
+prop_possible_moves_same_num p = all same_num $ possible_moves p
+  where
+    same_num (Move l r) = total l == total r
+
 apply_move :: Position -> Move -> [Position]
 apply_move pos move = nub [apply_result res pos move | res <- [Equal, Left, Right]]
 
@@ -106,7 +113,9 @@ apply_result Left  p (Move le ri) = let he = unknown le + heavy le
                                               }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
-prop_apply_result (QCPosMove p m) res = total p == total (apply_result res p m)
+prop_apply_result_sametotal (QCPosMove p m) res = total p == total (apply_result res p m)
+prop_apply_result_positive (QCPosMove p m) res = let p' = apply_result res p m
+                                                 in all (\l -> get_label l p' >= 0) all_labels
 
 bad_move :: Position -> Move -> Bool
 bad_move pos = any nowin . apply_move pos
