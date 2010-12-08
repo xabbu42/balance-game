@@ -1,12 +1,15 @@
 import Prelude hiding (Left, Right)
 import Test.QuickCheck hiding (Result)
 import Data.List
+import qualified Data.Map as M
+import Maybe
+import Debug.Trace
 
 data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , heavy   :: Int -- balls with could be heavy but not light
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
-                         } deriving (Show, Eq)
+                         } deriving (Show, Eq, Ord)
 data Label = Unknown | Heavy | Light | Normal
            deriving (Show, Eq)
 
@@ -128,15 +131,20 @@ good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 prop_good_moves p = (total p > 2) ==> (normal p >= total p - 1) == (null $ good_moves p)
 
 depth :: Position ->  Int
-depth pos
-  | normal pos >= total pos  - 1 = 0
-  | otherwise                    = 1 + (minimum'
-                                        $ map (maximum . map depth . apply_move pos) 
-                                        $ good_moves pos)
+depth pos = depth' pos
   where
+    mkpos u h l n = Position {unknown = u, heavy = h, light = l, normal = n}
+    memoized = M.fromList [let p = mkpos u h l n in (p, calc $ p) | u <- [0..unknown pos]
+                                                                  , h <- [0..(unknown pos + heavy pos)]
+                                                                  , l <- [0..(unknown pos + light pos)]
+                                                                  , n <- [0..total pos]]
+    depth' p = fromJust $ M.lookup p memoized
+    calc p | normal p >= total p  - 1 = 0
+           | otherwise                = 1 + (minimum'
+                                             $ map (maximum . map depth' . apply_move p)
+                                             $ good_moves p)
     minimum' [] = 1000
     minimum' l  = minimum l
 
 prop_depth p = (total p > 2 && total p < 6) ==> depth p < 1000
                     
-
