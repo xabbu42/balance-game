@@ -144,8 +144,8 @@ depth = depthWith $ \p -> (normal p >= total p - 1)
 depth_ :: Position -> Int
 depth_ = depthWith $ \p -> (normal p >= total p - 1 && unknown p == 0)
 
-depthWith :: (Position -> Bool) -> Position ->  Int
-depthWith cond pos = depth' pos
+memoized :: Position -> (Position -> a) -> (Position -> a)
+memoized pos func = \p -> fromJust $ M.lookup p table
   where
     mkpos u h l n = Position {unknown = u, heavy = h, light = l, normal = n}
     allpos = [mkpos u h l n | u <- [0..(unknown pos)            ]
@@ -153,8 +153,12 @@ depthWith cond pos = depth' pos
                             , l <- [0..(unknown pos + light pos)]
                             , n <- [0..(total pos)              ]
                             ]
-    memoized = M.fromList $ map (\p -> (p, calc p)) allpos
-    depth' p = fromJust $ M.lookup p memoized
+    table = M.fromList $ map (\p -> (p, func p)) allpos
+
+depthWith :: (Position -> Bool) -> Position ->  Int
+depthWith cond pos = depth' pos
+  where
+    depth' = memoized pos calc
     calc p | cond p    = 0
            | otherwise = 1 + (minimum' 
                               $ map (maximum . map depth' . apply_move p) 
