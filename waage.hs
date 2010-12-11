@@ -4,15 +4,46 @@ import Data.List
 import qualified Data.Map as M
 import Maybe
 import Debug.Trace
+import System
+import Text.ParserCombinators.Parsec
+
+main :: IO ()
+main = do
+  args <- getArgs
+  let ps = case args of
+                [] -> [startPosition 13]
+                _  -> map read args
+  sequence $ map (\p -> putStrLn $ show p ++ ": " ++ show (depth p)) ps
+  return ()
 
 data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , heavy   :: Int -- balls with could be heavy but not light
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
-                         } deriving (Show, Eq, Ord)
+                         } deriving (Eq, Ord)
 data Label = Unknown | Heavy | Light | Normal
-           deriving (Show, Eq)
+           deriving (Eq)
 
+instance Show Position where
+  show p = let f c l = case get_label l p of
+                            0 -> ""
+                            n -> c:show n
+           in concat $ zipWith f  "UHLN" [Unknown, Heavy, Light, Normal]
+
+instance Read Position where
+  readsPrec _ = either (const []) id . parse parsecRead ""
+    where
+      label = do
+        c <- oneOf "UHLN"
+        n <- many1 digit
+        let l = fromJust $ lookup c $ zip "UHLN" [Unknown, Heavy, Light, Normal]
+        return (l, read n)
+      set_label' p (l, n) = set_label l n p
+      parsecRead = do
+        xs <- many1 label
+        rest <- getInput
+        let pos = foldl set_label' emptyPosition xs
+        return [(pos, rest)]
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
