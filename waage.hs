@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 import Prelude hiding (Left, Right)
 import Test.QuickCheck hiding (Result)
 import Data.List
@@ -6,21 +7,49 @@ import Maybe
 import Debug.Trace
 import System
 import Text.ParserCombinators.Parsec
+import qualified Test.Framework as TF
+import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Data.Generics
+import Data.Typeable
+import qualified System.Console.CmdArgs as CMD
+import System.Console.CmdArgs ((&=))
+
+data Args = Calc { positions :: [String]
+                 , perfect   :: Bool
+                 }
+          | Test
+          deriving (Show, Data, Typeable)
+args = CMD.modes
+       [ Calc { positions = []    &= CMD.args
+              , perfect   = False &= CMD.name "p" &= CMD.help "Always find out if the ball is too light or too heavy."
+              } &= CMD.auto &= CMD.details ["Find out the *one* ball with the wrong weight among a given number of balls, using a comparative scale, with minimum number of weightings."]
+       , Test
+       ]
+       &= CMD.program "waage"
 
 main :: IO ()
 main = do
-  args <- getArgs
-  let ps = case args of
-                [] -> [startPosition 13]
-                _  -> map read args
-  sequence $ map (\p -> putStrLn $ show p ++ ": " ++ show (depth p)) ps
-  return ()
+  args <- CMD.cmdArgs args
+  case args of
+    Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
+    Test                               -> TF.defaultMainWithArgs tests []
+  where
+    handle_pos p  = if p then handle_pos' depth_ else handle_pos' depth
+    handle_pos' f p = putStrLn $ show p ++ ": " ++ show (f p)
+
+tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
+        , TF.testGroup "apply_result"   $ map testProperty' tests_apply_result
+        , TF.testGroup "Other" $ [ testProperty "sub"        prop_sub
+                                 , testProperty "good_moves" prop_good_moves
+                                 ]
+        ]
+        where testProperty' (n, f) = testProperty n f
 
 data Position = Position { unknown :: Int -- balls wich nothing known about them
                          , heavy   :: Int -- balls with could be heavy but not light
                          , light   :: Int -- balls with could be light but not heavy
                          , normal  :: Int -- balls with normal weight
-                         } deriving (Eq, Ord)
+                         } deriving (Eq, Ord, Data, Typeable)
 data Label = Unknown | Heavy | Light | Normal
            deriving (Eq)
 
@@ -34,7 +63,7 @@ instance Read Position where
   readsPrec _ = either (const []) id . parse parsecRead ""
     where
       label = do
-        c <- oneOf "UHLN"
+        c <- option 'U' $ oneOf "UHLN"
         n <- many1 digit
         let l = fromJust $ lookup c $ zip "UHLN" [Unknown, Heavy, Light, Normal]
         return (l, read n)
@@ -126,6 +155,11 @@ possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <-
     n = total p `div` 2
     other_scales s = possible_scales (p `sub` s) (total s)
 
+tests_possible_moves :: [(String, Position -> Bool)]
+tests_possible_moves = [ ("less_balls", prop_possible_moves_less_balls)
+                       , ("same_num"  , prop_possible_moves_same_num  )
+                       ]
+
 prop_possible_moves_less_balls :: Position -> Bool
 prop_possible_moves_less_balls p = all less_balls $ possible_moves p
   where
@@ -151,8 +185,12 @@ apply_result Left  p (Move le ri) = let he = unknown le + heavy le
                                               }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
-prop_apply_result_sametotal :: QCPosMove -> Result -> Bool
-prop_apply_result_sametotal (QCPosMove p m) res = total p == total (apply_result res p m)
+tests_apply_result :: [(String, QCPosMove -> Result -> Bool)]
+tests_apply_result = [ ("same_total", prop_apply_result_same_total)
+                     , ("positive"  , prop_apply_result_positive  )
+                     ]
+prop_apply_result_same_total :: QCPosMove -> Result -> Bool
+prop_apply_result_same_total (QCPosMove p m) res = total p == total (apply_result res p m)
 
 prop_apply_result_positive :: QCPosMove -> Result -> Bool
 prop_apply_result_positive (QCPosMove p m) res = let p' = apply_result res p m
