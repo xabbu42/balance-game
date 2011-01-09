@@ -1,0 +1,23 @@
+Name:                balance-game
+Version:             0.1
+
+Synopsis:            Find optimal solutions for the "balance game".
+
+Description:         In the balance game, you need to find the *one*
+                     ball with the wrong weight among a given number
+                     of balls using a balance scale. This program finds 
+                     optimal solutions to the balance game.
+
+Homepage:            http://github.com/xabbu42/balance_game
+License:             BSD3
+License-file:        LICENSE
+Author:              Nathan Gass
+Maintainer:          gass@search.ch
+Build-type:          Simple
+Cabal-version:       >=1.2
+
+Executable balance_game
+  Main-is: balance_game.hs
+  Build-depends: base, cmdargs, parsec, haskell98, containers,
+                 test-framework, test-framework-quickcheck2, QuickCheck
+  
