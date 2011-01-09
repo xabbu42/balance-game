@@ -25,7 +25,7 @@ args = CMD.modes
               } &= CMD.auto &= CMD.details ["Find out the *one* ball with the wrong weight among a given number of balls, using a comparative scale, with minimum number of weightings."]
        , Test
        ]
-       &= CMD.program "waage"
+       &= CMD.program "balance_scale"
 
 main :: IO ()
 main = do
