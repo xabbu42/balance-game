@@ -6,7 +6,7 @@ Synopsis:            Find optimal solutions for the "balance game".
 Description:         In the balance game, you need to find the *one*
                      ball with the wrong weight among a given number
                      of balls using a balance scale. This program finds 
-                     optimal solutions to the balance game.
+                     optimal solutions to this game.
 
 Homepage:            http://github.com/xabbu42/balance_game
 License:             BSD3

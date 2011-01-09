@@ -21,9 +21,16 @@ data Args = Calc { positions :: [String]
           deriving (Show, Data, Typeable)
 args = CMD.modes
        [ Calc { positions = []    &= CMD.args
-              , perfect   = False &= CMD.name "p" &= CMD.help "Always find out if the ball is too light or too heavy."
-              } &= CMD.auto &= CMD.details ["Find out the *one* ball with the wrong weight among a given number of balls, using a comparative scale, with minimum number of weightings."]
-       , Test
+              , perfect   = False &= CMD.name "p"
+                                  &= CMD.help ("Only consider solutions where it is known"
+                                               ++ " if the ball is too heavy or too light.")
+              } &= CMD.auto
+                &= CMD.details [ "In the balance game, you need to find the *one*"
+                                 ++ " ball with the wrong weight among a given number"
+                                 ++ " of balls using a balance scale. This program finds"
+                                 ++ " optimal solutions to this game."
+                               ]
+       , Test &= CMD.details ["Run some tests for this program."]
        ]
        &= CMD.program "balance_scale"
 
@@ -34,7 +41,7 @@ main = do
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
     Test                               -> TF.defaultMainWithArgs tests []
   where
-    handle_pos p  = if p then handle_pos' depth_ else handle_pos' depth
+    handle_pos p  = if p then handle_pos' depthPerfect else handle_pos' depthUnknown
     handle_pos' f p = putStrLn $ show p ++ ": " ++ show (f p)
 
 tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
@@ -207,11 +214,11 @@ good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 prop_good_moves :: Position -> Bool
 prop_good_moves p = (normal p >= total p - 1) == (null $ good_moves p)
 
-depth :: Position -> Int
-depth = depthWith $ \p -> (normal p >= total p - 1)
+depthUnknown :: Position -> Int
+depthUnknown = depthWith $ \p -> (normal p >= total p - 1)
 
-depth_ :: Position -> Int
-depth_ = depthWith $ \p -> (normal p >= total p - 1 && unknown p == 0)
+depthPerfect :: Position -> Int
+depthPerfect = depthWith $ \p -> (normal p >= total p - 1 && unknown p == 0)
 
 memoized :: Position -> (Position -> a) -> (Position -> a)
 memoized pos func = \p -> fromJust $ M.lookup p table
