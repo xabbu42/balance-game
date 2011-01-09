@@ -1,18 +1,15 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 import Prelude hiding (Left, Right)
-import Test.QuickCheck hiding (Result)
+import Data.Generics
 import Data.List
 import qualified Data.Map as M
-import Maybe
-import Debug.Trace
-import System
+import Maybe (fromJust)
 import Text.ParserCombinators.Parsec
-import qualified Test.Framework as TF
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Data.Generics
-import Data.Typeable
 import qualified System.Console.CmdArgs as CMD
 import System.Console.CmdArgs ((&=))
+import qualified Test.Framework as TF
+import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.QuickCheck hiding (Result)
 
 data Args = Calc { positions :: [String]
                  , perfect   :: Bool
