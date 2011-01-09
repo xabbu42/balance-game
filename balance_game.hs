@@ -3,7 +3,8 @@ import Prelude hiding (Left, Right)
 import Data.Generics
 import Data.List
 import qualified Data.Map as M
-import Maybe (fromJust)
+import Maybe
+import Monad
 import Text.ParserCombinators.Parsec
 import qualified System.Console.CmdArgs as CMD
 import System.Console.CmdArgs ((&=))
@@ -16,6 +17,7 @@ data Args = Calc { positions :: [String]
                  }
           | Test
           deriving (Show, Data, Typeable)
+
 args = CMD.modes
        [ Calc { positions = []    &= CMD.args
               , perfect   = False &= CMD.name "p"
@@ -229,13 +231,19 @@ memoized pos func = \p -> fromJust $ M.lookup p table
     table = M.fromList $ map (\p -> (p, func p)) allpos
 
 depthWith :: (Position -> Bool) -> Position ->  Int
-depthWith cond pos = depth' pos
+depthWith cond pos = fromJust $ depth' pos
   where
     depth' = memoized pos calc
-    calc p | cond p    = 0
-           | otherwise = 1 + (minimum' 
-                              $ map (maximum . map depth' . apply_move p) 
-                              $ good_moves p)
-    minimum' [] = 1000
-    minimum' l  = minimum l
+    calc p | cond p    = Just 0
+           | otherwise = liftM (+1)
+                         $ maybeMinimum
+                         $ map (maybeMaximum . map depth' . apply_move p)
+                         $ good_moves p
 
+maybeMaximum :: [Maybe Int] -> Maybe Int
+maybeMaximum ls | any isNothing ls = Nothing
+                | otherwise        = Just $ maximum $ catMaybes ls
+
+maybeMinimum :: [Maybe Int] -> Maybe Int
+maybeMinimum ls | all isNothing ls = Nothing
+                | otherwise        = Just $ minimum $ catMaybes ls
