@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, TypeSynonymInstances, OverlappingInstances #-}
 import Prelude hiding (Left, Right)
 import Data.Generics
 import Data.List
@@ -236,14 +236,13 @@ depthWith cond pos = fromJust $ depth pos
     depth = memoized pos calc
     calc p | cond p    = Just 0
            | otherwise = liftM (+1)
-                         $ maybeMinimum
-                         $ map (maybeMaximum . map depth . apply_move p)
+                         $ minimum
+                         $ map (maximum . map depth . apply_move p)
                          $ good_moves p
 
-maybeMaximum :: [Maybe Int] -> Maybe Int
-maybeMaximum ls | any isNothing ls = Nothing
-                | otherwise        = Just $ maximum $ catMaybes ls
+type Depth = Maybe Int
 
-maybeMinimum :: [Maybe Int] -> Maybe Int
-maybeMinimum ls | all isNothing ls = Nothing
-                | otherwise        = Just $ minimum $ catMaybes ls
+instance Ord Depth where
+  _       <= Nothing = True
+  Nothing <= _       = False
+  Just a  <= Just b  = a <= b
