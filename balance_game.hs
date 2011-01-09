@@ -51,9 +51,9 @@ tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
         ]
         where testProperty' (n, f) = testProperty n f
 
-data Position = Position { unknown :: Int -- balls wich nothing known about them
-                         , heavy   :: Int -- balls with could be heavy but not light
-                         , light   :: Int -- balls with could be light but not heavy
+data Position = Position { unknown :: Int -- balls with completely unknown weight
+                         , heavy   :: Int -- balls which could be heavy but not light
+                         , light   :: Int -- balls which could be light but not heavy
                          , normal  :: Int -- balls with normal weight
                          } deriving (Eq, Ord, Data, Typeable)
 data Label = Unknown | Heavy | Light | Normal
