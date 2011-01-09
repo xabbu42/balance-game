@@ -231,13 +231,13 @@ memoized pos func = \p -> fromJust $ M.lookup p table
     table = M.fromList $ map (\p -> (p, func p)) allpos
 
 depthWith :: (Position -> Bool) -> Position ->  Int
-depthWith cond pos = fromJust $ depth' pos
+depthWith cond pos = fromJust $ depth pos
   where
-    depth' = memoized pos calc
+    depth = memoized pos calc
     calc p | cond p    = Just 0
            | otherwise = liftM (+1)
                          $ maybeMinimum
-                         $ map (maybeMaximum . map depth' . apply_move p)
+                         $ map (maybeMaximum . map depth . apply_move p)
                          $ good_moves p
 
 maybeMaximum :: [Maybe Int] -> Maybe Int
