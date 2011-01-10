@@ -6,8 +6,11 @@ import qualified Data.Map as M
 import Maybe
 import Monad
 import Text.ParserCombinators.Parsec
+
 import qualified System.Console.CmdArgs as CMD
 import System.Console.CmdArgs ((&=))
+import System.Environment
+
 import Test.Framework.TH
 import qualified Test.Framework as TF
 import Test.Framework.Providers.QuickCheck2 (testProperty)
@@ -15,10 +18,14 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.QuickCheck hiding (Result)
 import Test.HUnit
 
+import Criterion.Main
+import Criterion.Config hiding (Normal)
+
 data Args = Calc { positions :: [String]
                  , perfect   :: Bool
                  }
           | Test
+          | Benchmark
           deriving (Show, Data, Typeable)
 
 args = CMD.modes
@@ -33,6 +40,7 @@ args = CMD.modes
                                  ++ " optimal solutions to this game."
                                ]
        , Test &= CMD.details ["Run some tests for this program."]
+       , Benchmark &= CMD.details ["Run some benchmarks for this program."]
        ]
        &= CMD.program "balance_scale"
 
@@ -42,10 +50,15 @@ main = do
   case args of
     Calc {positions = [], perfect = p} -> handle_pos p $ start_position 13
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
-    Test                               -> TF.defaultMainWithArgs [$(testGroupGenerator)] []
+    Test                               -> withArgs [] $ $(defaultMainGenerator)
+    Benchmark                          -> withArgs [] $ defaultMain benchmarks
   where
     handle_pos p pos  = putStrLn $ show pos ++ ": "
                         ++ (show $ (if p then depth_perfect else depth_unknown) $ pos)
+    benchmarks        = concat $ map benchmark_pos ["U3", "U13"]
+    benchmark_pos s   = [ bench ("unknown " ++ s) $ whnf depth_unknown (read s)
+                        , bench ("perfect " ++ s) $ whnf depth_perfect (read s)
+                        ]
 
 data Position = Position { unknown :: Int -- balls with completely unknown weight
                          , heavy   :: Int -- balls which could be heavy but not light
