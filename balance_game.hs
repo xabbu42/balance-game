@@ -37,12 +37,12 @@ main :: IO ()
 main = do
   args <- CMD.cmdArgs args
   case args of
-    Calc {positions = [], perfect = p} -> handle_pos p $ startPosition 13
+    Calc {positions = [], perfect = p} -> handle_pos p $ start_position 13
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
     Test                               -> TF.defaultMainWithArgs tests []
   where
     handle_pos p pos  = putStrLn $ show pos ++ ": "
-                        ++ (show $ (if p then depthPerfect else depthUnknown) $ pos)
+                        ++ (show $ (if p then depth_perfect else depth_unknown) $ pos)
 
 tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
         , TF.testGroup "apply_result"   $ map testProperty' tests_apply_result
@@ -78,14 +78,14 @@ instance Read Position where
       parsecRead = do
         xs <- many1 label
         rest <- getInput
-        let pos = foldl set_label' emptyPosition xs
+        let pos = foldl set_label' empty_position xs
         return [(pos, rest)]
 
 instance Arbitrary Position where
   arbitrary = sized $ \n -> do
     let n' = (n + 3) `min` 10
     labels <- sequence $ replicate n' $ oneof $ map return all_labels 
-    return $ foldl (\p l -> set_label l (length $ filter (== l) labels) p) emptyPosition all_labels
+    return $ foldl (\p l -> set_label l (length $ filter (== l) labels) p) empty_position all_labels
 
 data QCPosMove = QCPosMove Position Move
                  deriving (Show)
@@ -133,11 +133,11 @@ get_label Normal  = normal
 total :: Position -> Int
 total p = sum $ [get_label f p | f <- all_labels]
 
-emptyPosition :: Position
-emptyPosition = Position {unknown = 0, heavy = 0, light = 0, normal = 0}
+empty_position :: Position
+empty_position = Position {unknown = 0, heavy = 0, light = 0, normal = 0}
 
-startPosition :: Int -> Position
-startPosition i = set_label Unknown i emptyPosition
+start_position :: Int -> Position
+start_position i = set_label Unknown i empty_position
 
 sub :: Position -> Position -> Position
 sub a b = foldl sub_label  a all_labels
@@ -150,7 +150,7 @@ prop_sub p1 p2 = total (p1 `sub` p2) == (total p1 - total p2)
 possible_scales :: Position -> Int -> [Scale]
 possible_scales p n = possible_scales' p all_labels n
   where
-    possible_scales' _ _ 0      = [emptyPosition]
+    possible_scales' _ _ 0      = [empty_position]
     possible_scales' p (l:ls) n = let m     = min n (get_label l p)
                                       sub i = map (set_label l i) $ possible_scales' p ls (n - i)
                                   in concat [sub i | i <- [0..m]]
@@ -214,11 +214,11 @@ good_moves pos = filter (not . bad_move pos) $ possible_moves pos
 prop_good_moves :: Position -> Bool
 prop_good_moves p = (normal p >= total p - 1) == (null $ good_moves p)
 
-depthUnknown :: Position -> Int
-depthUnknown = depthWith $ \p -> (normal p >= total p - 1)
+depth_unknown :: Position -> Int
+depth_unknown = depth_with $ \p -> (normal p >= total p - 1)
 
-depthPerfect :: Position -> Int
-depthPerfect = depthWith $ \p -> (normal p >= total p - 1 && unknown p == 0)
+depth_perfect :: Position -> Int
+depth_perfect = depth_with $ \p -> (normal p >= total p - 1 && unknown p == 0)
 
 memoized :: Position -> (Position -> a) -> (Position -> a)
 memoized pos func = \p -> fromJust $ M.lookup p table
@@ -231,20 +231,20 @@ memoized pos func = \p -> fromJust $ M.lookup p table
                             ]
     table = M.fromList $ map (\p -> (p, func p)) allpos
 
-depthWith :: (Position -> Bool) -> Position ->  Int
-depthWith cond pos = fromJust $ depth pos
+depth_with :: (Position -> Bool) -> Position ->  Int
+depth_with cond pos = fromJust $ depth pos
   where
     depth = memoized pos calc
     calc p | cond p    = Just 0
            | otherwise = liftM (+1)
-                         $ maybeMinimum
-                         $ map (maybeMaximum . map depth . apply_move p)
+                         $ maybe_minimum
+                         $ map (maybe_maximum . map depth . apply_move p)
                          $ good_moves p
 
-maybeMaximum :: [Maybe Int] -> Maybe Int
-maybeMaximum ls | any isNothing ls = Nothing
-                | otherwise        = Just $ maximum $ catMaybes ls
+maybe_maximum :: [Maybe Int] -> Maybe Int
+maybe_maximum ls | any isNothing ls = Nothing
+                 | otherwise        = Just $ maximum $ catMaybes ls
 
-maybeMinimum :: [Maybe Int] -> Maybe Int
-maybeMinimum ls | all isNothing ls = Nothing
-                | otherwise        = Just $ minimum $ catMaybes ls
+maybe_minimum :: [Maybe Int] -> Maybe Int
+maybe_minimum ls | all isNothing ls = Nothing
+                 | otherwise        = Just $ minimum $ catMaybes ls
