@@ -41,8 +41,8 @@ main = do
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
     Test                               -> TF.defaultMainWithArgs tests []
   where
-    handle_pos p  = if p then handle_pos' depthPerfect else handle_pos' depthUnknown
-    handle_pos' f p = putStrLn $ show p ++ ": " ++ show (f p)
+    handle_pos p pos  = putStrLn $ show pos ++ ": "
+                        ++ (show $ (if p then depthPerfect else depthUnknown) $ pos)
 
 tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
         , TF.testGroup "apply_result"   $ map testProperty' tests_apply_result
