@@ -236,7 +236,7 @@ depth_with cond pos = fromJust $ depth pos
                          $ good_moves p
 
 depth_ord :: Maybe Int -> Maybe Int -> Ordering
-depth_ord Nothing Nothing = EQ
-depth_ord _       Nothing = LT
-depth_ord Nothing _       = GT
-depth_ord a       b       = a `compare` b
+depth_ord Nothing  Nothing  = EQ
+depth_ord _        Nothing  = LT
+depth_ord Nothing  _        = GT
+depth_ord (Just a) (Just b) = a `compare` b
