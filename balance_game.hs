@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
 import Prelude hiding (Left, Right)
 import Data.Generics
 import Data.List
@@ -8,6 +8,7 @@ import Monad
 import Text.ParserCombinators.Parsec
 import qualified System.Console.CmdArgs as CMD
 import System.Console.CmdArgs ((&=))
+import Test.Framework.TH
 import qualified Test.Framework as TF
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck hiding (Result)
@@ -39,18 +40,10 @@ main = do
   case args of
     Calc {positions = [], perfect = p} -> handle_pos p $ start_position 13
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
-    Test                               -> TF.defaultMainWithArgs tests []
+    Test                               -> TF.defaultMainWithArgs [$(testGroupGenerator)] []
   where
     handle_pos p pos  = putStrLn $ show pos ++ ": "
                         ++ (show $ (if p then depth_perfect else depth_unknown) $ pos)
-
-tests = [ TF.testGroup "possible_moves" $ map testProperty' tests_possible_moves
-        , TF.testGroup "apply_result"   $ map testProperty' tests_apply_result
-        , TF.testGroup "Other" $ [ testProperty "sub"        prop_sub
-                                 , testProperty "good_moves" prop_good_moves
-                                 ]
-        ]
-        where testProperty' (n, f) = testProperty n f
 
 data Position = Position { unknown :: Int -- balls with completely unknown weight
                          , heavy   :: Int -- balls which could be heavy but not light
@@ -162,11 +155,6 @@ possible_moves p = nub $ [Move a b | k <- [1..n], a <- possible_scales p k, b <-
     n = total p `div` 2
     other_scales s = possible_scales (p `sub` s) (total s)
 
-tests_possible_moves :: [(String, Position -> Bool)]
-tests_possible_moves = [ ("less_balls", prop_possible_moves_less_balls)
-                       , ("same_num"  , prop_possible_moves_same_num  )
-                       ]
-
 prop_possible_moves_less_balls :: Position -> Bool
 prop_possible_moves_less_balls p = all less_balls $ possible_moves p
   where
@@ -192,10 +180,6 @@ apply_result Left  p (Move le ri) = let he = unknown le + heavy le
                                               }
 apply_result Right p (Move l r) = apply_result Left p (Move r l)
 
-tests_apply_result :: [(String, QCPosMove -> Result -> Bool)]
-tests_apply_result = [ ("same_total", prop_apply_result_same_total)
-                     , ("positive"  , prop_apply_result_positive  )
-                     ]
 prop_apply_result_same_total :: QCPosMove -> Result -> Bool
 prop_apply_result_same_total (QCPosMove p m) res = total p == total (apply_result res p m)
 

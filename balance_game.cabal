@@ -19,5 +19,6 @@ Cabal-version:       >=1.2
 Executable balance_game
   Main-is: balance_game.hs
   Build-depends: base >= 4, syb, cmdargs, parsec, haskell98, containers,
-                 test-framework, test-framework-quickcheck2, QuickCheck
+                 test-framework, test-framework-th,
+                 test-framework-quickcheck2, QuickCheck
   
