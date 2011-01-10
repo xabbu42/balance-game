@@ -37,6 +37,7 @@ main :: IO ()
 main = do
   args <- CMD.cmdArgs args
   case args of
+    Calc {positions = [], perfect = p} -> handle_pos p $ startPosition 13
     Calc {positions = ps, perfect = p} -> sequence_ $ map (handle_pos p . read) ps
     Test                               -> TF.defaultMainWithArgs tests []
   where
