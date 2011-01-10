@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable, TemplateHaskell #-}
 import Prelude hiding (Left, Right)
-import Data.Generics
+import Data.Generics hiding (GT)
 import Data.List
 import qualified Data.Map as M
 import Maybe
@@ -231,14 +231,12 @@ depth_with cond pos = fromJust $ depth pos
     depth = memoized pos calc
     calc p | cond p    = Just 0
            | otherwise = liftM (+1)
-                         $ maybe_minimum
-                         $ map (maybe_maximum . map depth . apply_move p)
+                         $ minimumBy depth_ord
+                         $ map (maximumBy depth_ord . map depth . apply_move p)
                          $ good_moves p
 
-maybe_maximum :: [Maybe Int] -> Maybe Int
-maybe_maximum ls | any isNothing ls = Nothing
-                 | otherwise        = Just $ maximum $ catMaybes ls
-
-maybe_minimum :: [Maybe Int] -> Maybe Int
-maybe_minimum ls | all isNothing ls = Nothing
-                 | otherwise        = Just $ minimum $ catMaybes ls
+depth_ord :: Maybe Int -> Maybe Int -> Ordering
+depth_ord Nothing Nothing = EQ
+depth_ord _       Nothing = LT
+depth_ord Nothing _       = GT
+depth_ord a       b       = a `compare` b
