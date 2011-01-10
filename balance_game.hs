@@ -11,7 +11,9 @@ import System.Console.CmdArgs ((&=))
 import Test.Framework.TH
 import qualified Test.Framework as TF
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.Framework.Providers.HUnit (testCase)
 import Test.QuickCheck hiding (Result)
+import Test.HUnit
 
 data Args = Calc { positions :: [String]
                  , perfect   :: Bool
@@ -201,8 +203,16 @@ prop_good_moves p = (normal p >= total p - 1) == (null $ good_moves p)
 depth_unknown :: Position -> Int
 depth_unknown = depth_with $ \p -> (normal p >= total p - 1)
 
+case_depth_unknown_4  = 2 @=? depth_unknown (start_position 4)
+case_depth_unknown_13 = 3 @=? depth_unknown (start_position 13)
+case_depth_unknown_14 = 4 @=? depth_unknown (start_position 14)
+
 depth_perfect :: Position -> Int
 depth_perfect = depth_with $ \p -> (normal p >= total p - 1 && unknown p == 0)
+
+case_depth_perfect_4  = 3 @=? depth_perfect (start_position 4)
+case_depth_perfect_12 = 3 @=? depth_perfect (start_position 12)
+case_depth_perfect_13 = 4 @=? depth_perfect (start_position 13)
 
 memoized :: Position -> (Position -> a) -> (Position -> a)
 memoized pos func = \p -> fromJust $ M.lookup p table
