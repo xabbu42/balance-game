@@ -55,7 +55,7 @@ main = do
   where
     handle_pos p pos  = putStrLn $ show pos ++ ": "
                         ++ (show $ (if p then depth_perfect else depth_unknown) $ pos)
-    benchmarks        = concat $ map benchmark_pos ["U3", "U13"]
+    benchmarks        = concat $ map benchmark_pos ["U3", "U5", "U13"]
     benchmark_pos s   = [ bench ("unknown " ++ s) $ whnf depth_unknown (read s)
                         , bench ("perfect " ++ s) $ whnf depth_perfect (read s)
                         ]
