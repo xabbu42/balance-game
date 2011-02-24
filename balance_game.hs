@@ -118,7 +118,7 @@ data Result = Equal | Left | Right
             deriving (Show, Eq)
 
 instance Arbitrary Result where
-  arbitrary = oneof [return Equal, return Left, return Right]
+  arbitrary = oneof $ map return [Equal, Left, Right]
 
 all_labels :: [Label]
 all_labels = [Unknown, Heavy, Light, Normal]
@@ -139,7 +139,7 @@ get_label Normal  = normal
 -- add_label l i p = set_label l (get_label l p ++ i) p
 
 total :: Position -> Int
-total p = sum $ [get_label f p | f <- all_labels]
+total p = sum [get_label f p | f <- all_labels]
 
 empty_position :: Position
 empty_position = Position {unknown = 0, heavy = 0, light = 0, normal = 0}
