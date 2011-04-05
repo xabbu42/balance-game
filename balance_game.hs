@@ -284,7 +284,7 @@ data Tree = Branch { move :: Move
 
 solution_with :: (Position -> Bool) -> Position -> Tree
 solution_with cond pos
-  | (normal pos >= total pos - 1 && unknown pos == 0) = Node pos
+  | cond pos  = Node pos
   | otherwise = Branch { move     = best_move
                        , position = pos
                        , left     = solution_with cond $ apply_result Left  pos best_move
