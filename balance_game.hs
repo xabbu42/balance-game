@@ -253,21 +253,26 @@ memoized pos func = \p -> fromJust $ M.lookup p table
                             ]
     table = M.fromList $ map (\p -> (p, func p)) allpos
 
+calc_depth :: (Position -> Maybe Int)
+           -> (Position -> Bool)
+           -> Position
+           -> Maybe Int
+calc_depth func cond p
+  | cond p    = Just 0
+  | otherwise = liftM (+1)
+                $ minimumBy depth_ord
+                $ map (maximumBy depth_ord . map func . apply_move p)
+                $ good_moves p
+  where
+    depth_ord Nothing  Nothing  = EQ
+    depth_ord _        Nothing  = LT
+    depth_ord Nothing  _        = GT
+    depth_ord (Just a) (Just b) = a `compare` b
+
 depth_with :: (Position -> Bool) -> Position ->  Int
 depth_with cond pos = fromJust $ depth pos
   where
-    depth = memoized pos calc
-    calc p | cond p    = Just 0
-           | otherwise = liftM (+1)
-                         $ minimumBy depth_ord
-                         $ map (maximumBy depth_ord . map depth . apply_move p)
-                         $ good_moves p
-
-depth_ord :: Maybe Int -> Maybe Int -> Ordering
-depth_ord Nothing  Nothing  = EQ
-depth_ord _        Nothing  = LT
-depth_ord Nothing  _        = GT
-depth_ord (Just a) (Just b) = a `compare` b
+    depth = memoized pos $ calc_depth depth cond
 
 data Tree = Branch { move :: Move
                    , position :: Position
@@ -287,8 +292,9 @@ solution_with cond pos
                        , right    = solution_with cond $ apply_result Right pos best_move
                        }
   where
+    mydepth       = memoized pos $ calc_depth mydepth cond
     best_move     = fst $ minimumBy moves_ord $ map add_depth $ good_moves pos
-    add_depth m   = (m, maximum $ map (depth_with cond) $ apply_move pos m)
+    add_depth m   = (m, maximum $ map mydepth $ apply_move pos m)
     moves_ord a b = snd a `compare` snd b
 
 solution_unknown :: Position -> Tree
