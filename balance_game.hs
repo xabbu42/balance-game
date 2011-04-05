@@ -54,8 +54,8 @@ main = do
   case args of
     Calc {positions = [], perfect = p, solution = s} -> handle_pos p s $ start_position 13
     Calc {positions = ps, perfect = p, solution = s} -> sequence_ $ map (handle_pos p s . read) ps
-    Test                               -> withArgs [] $ $(defaultMainGenerator)
-    Benchmark                          -> withArgs [] $ defaultMain benchmarks
+    Test                                             -> withArgs [] $ $(defaultMainGenerator)
+    Benchmark                                        -> withArgs [] $ defaultMain benchmarks
   where
     cond True  = is_perfect_solution
     cond False = is_solution
