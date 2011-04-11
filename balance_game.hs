@@ -63,8 +63,8 @@ main = do
     result False p pos = show $ depth_with (cond p) pos
     handle_pos p s pos = putStrLn $ show pos ++ ": " ++ result s p pos ++ "\n"
     benchmarks         = concat $ map benchmark_pos ["U3", "U5", "U13"]
-    benchmark_pos s    = [ bench ("unknown depth " ++ s) $ whnf depth_unknown (read s)
-                         , bench ("perfect depth " ++ s) $ whnf depth_perfect (read s)
+    benchmark_pos s    = [ bench ("unknown depth "    ++ s) $ whnf depth_unknown    (read s)
+                         , bench ("perfect depth "    ++ s) $ whnf depth_perfect    (read s)
                          , bench ("unknown solution " ++ s) $ whnf solution_unknown (read s)
                          ]
 
@@ -274,11 +274,11 @@ depth_with cond pos = fromJust $ depth pos
   where
     depth = memoized pos $ calc_depth depth cond
 
-data Tree = Branch { move :: Move
+data Tree = Branch { move     :: Move
                    , position :: Position
-                   , left :: Tree
-                   , equal :: Tree
-                   , right :: Tree
+                   , left     :: Tree
+                   , equal    :: Tree
+                   , right    :: Tree
                    }
           | Node Position
 
